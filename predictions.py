@@ -17,9 +17,15 @@ from fpdf import FPDF
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import logging
+import os
+from datetime import datetime
+import plotly.express as px
 
-# Stocks: NVIDIA, Apple, Microsoft, Amazon, Meta, Alphabet, Tesla, AMD, Intel, Broadcom, Qualcomm, Texas Instruments
+# Setup logging for error tracking and debugging
+logging.basicConfig(filename="app.log", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
+# Sample stock prediction data for Magnificent 7 + Semiconductor stocks
 data = {
     "Year": [2025, 2026, 2027, 2028, 2029, 2030],
     "NVIDIA": [0, 60, 120, 180, 240, 300],
@@ -38,19 +44,31 @@ data = {
 
 df = pd.DataFrame(data)
 
+# Caching mechanism for fetched stock data
+stock_data_cache = {}
+
+# Function to write the DataFrame content to an Excel worksheet
 def write_dataframe_to_sheet(dataframe, worksheet):
+    """
+    Writes the DataFrame into the specified worksheet, placing the data in rows and columns.
+    The first row is used for the column headers, followed by the data from the DataFrame.
+    """
     for r_idx, row in enumerate(dataframe_to_rows(dataframe, index=False, header=True), 1):
         for c_idx, value in enumerate(row, 1):
             worksheet.cell(row=r_idx, column=c_idx, value=value)
 
-# Excel Export with Charts
-
+# Function to generate Excel with stock forecasts and add charts
 def generate_excel_with_charts():
+    """
+    Generates an Excel file containing the stock forecast data.
+    For each stock in the data dictionary, a line chart is created displaying the stock's
+    price forecast over the 6 years. The chart is added to the worksheet, which is saved as
+    'Tech_Semiconductor_Stock_Forecasts.xlsx'.
+    """    # Create a new Excel workbook and add a worksheet
     filename = "Tech_Semiconductor_Stock_Forecasts.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Forecasts"
-
     write_dataframe_to_sheet(df, ws)
 
     stocks = list(data.keys())[1:]
@@ -75,17 +93,23 @@ def generate_excel_with_charts():
     wb.save(filename)
     messagebox.showinfo("Success", f"Excel file '{filename}' created with charts.")
 
-# JSON Export
-
+# Function to export stock data to a JSON file
 def export_to_json():
+    """
+    Opens a file dialog for the user to select a location to save a JSON file.
+    The stock forecast data is saved in JSON format with records for each year.
+    """    # Convert DataFrame to JSON format
     file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
     if file_path:
         df.to_json(file_path, orient="records", indent=4)
         messagebox.showinfo("Success", f"Data exported to {file_path}")
 
-# PDF Export
-
+# Function to export stock data to a PDF file
 def export_to_pdf():
+    """
+    Opens a file dialog for the user to select a location to save a PDF file.
+    The stock forecast data is written into the PDF in a simple text format.
+    """
     file_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF files", "*.pdf")])
     if file_path:
         pdf = FPDF()
@@ -98,9 +122,44 @@ def export_to_pdf():
         pdf.output(file_path)
         messagebox.showinfo("Success", f"PDF exported to {file_path}")
 
-# News Access
+# Function to fetch stock data with caching
+def fetch_stock_data(ticker):
+    if ticker in stock_data_cache:
+        return stock_data_cache[ticker]
+    stock = yf.Ticker(ticker)
+    data = stock.history(period="5y")
+    if data.empty:
+        logging.error(f"No data found for ticker: {ticker}")
+        return None
+    stock_data_cache[ticker] = data
+    return data
 
+# Function to preprocess stock data
+def preprocess_data(ticker):
+    """
+    Fetches historical stock data for the given ticker using Yahoo Finance API.
+    Prepares the data by extracting features (Open, High, Low, Volume) and labels (Next day's Close price).
+    Scales the features using StandardScaler and returns the preprocessed data.
+    """
+    data = fetch_stock_data(ticker)
+    if data is None:
+        return None
+    data['Tomorrow'] = data['Close'].shift(-1)
+    data.dropna(inplace=True)
+    X = data[['Open', 'High', 'Low', 'Volume']]
+    y = data['Tomorrow']
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    return X_scaled, y
+
+# Optimized function to open market news related to the selected companies
 def open_news():
+    """
+    Opens a web browser to display market news for the selected stock tickers.
+    Users can enter a list of stock tickers or choose 'ALL' to view news for all the stocks.
+    The function now handles multiple ticker news requests efficiently.
+    """
+    # Dictionary of URLs for each stock's news
     urls = {
         "NVIDIA": "https://www.bloomberg.com/news/features/2025-03-14/can-nvidia-stock-go-higher-jensen-huang-looks-to-extend-ai-boom",
         "Apple": "https://www.cnn.com/business/tech/apple",
@@ -115,23 +174,32 @@ def open_news():
         "Qualcomm": "https://www.marketbeat.com/stocks/NASDAQ/NVDA/competitors-and-alternatives/",
         "Texas Instruments": "https://www.marketbeat.com/stocks/NASDAQ/NVDA/competitors-and-alternatives/"
     }
+
+    # Prompt the user to enter tickers or use 'ALL' to see news for all stocks
     choices = tk.simpledialog.askstring("News", "Enter companies (comma separated) or 'ALL' for all:")
     if choices:
         selections = [name.strip() for name in choices.upper().split(",")] if choices != 'ALL' else list(urls.keys())
+
+        # Efficiently open news URLs only for the selected tickers
         for name in selections:
             url = urls.get(name.title())
             if url:
                 webbrowser.open(url)
+            else:
+                messagebox.showwarning("Invalid Ticker", f"No news available for {name}")
 
-# Email alert function
 
+# Function to send email alerts
 def send_email_alert(subject, body, to_email):
-    import os
+    """
+    Sends an email alert to the specified recipient with the provided subject and body content.
+    Uses Gmail's SMTP server to send the email. If credentials are not available, prompts the user to enter them.
+    """
     from_email = os.getenv("EMAIL_ADDRESS")
     password = os.getenv("EMAIL_PASSWORD")
     if not from_email or not password:
-        messagebox.showerror("Email Failed", "Email credentials not found in environment variables.")
-        return
+        from_email = tk.simpledialog.askstring("Email", "Enter your email address:")
+        password = tk.simpledialog.askstring("Email", "Enter your email password:", show="*")
 
     msg = MIMEMultipart()
     msg['From'] = from_email
@@ -150,41 +218,12 @@ def send_email_alert(subject, body, to_email):
     except Exception as e:
         messagebox.showerror("Email Failed", str(e))
 
-# Compare multiple tickers
-
-def compare_tickers(tickers):
-    scores = {}
-    for ticker in tickers:
-        try:
-            stock = yf.Ticker(ticker)
-            data = stock.history(period="5y")
-            if data.empty:
-                continue
-            data['Tomorrow'] = data['Close'].shift(-1)
-            data.dropna(inplace=True)
-            X = data[['Open', 'High', 'Low', 'Volume']]
-            y = data['Tomorrow']
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-            scaler = StandardScaler()
-            X_train = scaler.fit_transform(X_train)
-            X_test = scaler.transform(X_test)
-            model = GradientBoostingRegressor()
-            model.fit(X_train, y_train)
-            score = model.score(X_test, y_test) * 100
-            scores[ticker] = round(score, 2)
-        except:
-            scores[ticker] = "Error"
-    score_text = "\n".join([f"{k}: {v}%" for k, v in scores.items()])
-    messagebox.showinfo("Model Accuracy Scores", score_text)
-
-# Forecast function updated with email and plotting
-
+# Function to forecast stock prices
 def forecast_stock(ticker):
-    stock = yf.Ticker(ticker)
-    data = stock.history(period="5y")
-    if data.empty:
+    data = fetch_stock_data(ticker)
+    if data is None:
         messagebox.showerror("Error", f"No data found for {ticker}.")
-        return
+        return None  # Return None if no data is found
 
     data['Tomorrow'] = data['Close'].shift(-1)
     data.dropna(inplace=True)
@@ -202,25 +241,54 @@ def forecast_stock(ticker):
     predicted_price = model.predict([scaler.transform([X.iloc[-1]])[0]])[0]
     accuracy = model.score(X_test, y_test) * 100
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(data.index[-100:], data['Close'].iloc[-100:], label="Actual")
-    plt.title(f"{ticker} Recent Stock Prices")
-    plt.xlabel("Date")
-    plt.ylabel("Price")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
     alert_message = f"Predicted Closing Price for Tomorrow ({ticker}): ${predicted_price:.2f}\nModel Accuracy: {accuracy:.2f}%"
     messagebox.showinfo("AI Prediction", alert_message)
 
-    # Email alert prompt
-    if messagebox.askyesno("Send Email Alert?", "Would you like to email this forecast?"):
-        recipient = tk.simpledialog.askstring("Email", "Enter recipient email:")
-        if recipient:
-            send_email_alert(f"{ticker} Stock Prediction", alert_message, recipient)
+    return predicted_price  # Return the predicted price
 
-# GUI additions
+# Function to compare the AI model accuracy for multiple stock tickers
+def compare_tickers(tickers):
+    """
+    Compares the AI prediction accuracy scores for multiple tickers by fetching data for each ticker,
+    training a machine learning model, and displaying the accuracy scores for each stock in a message box.
+    """
+    scores = {}
+
+    for ticker in tickers:
+        try:
+            data = fetch_stock_data(ticker)
+            if data is None:
+                continue
+            data['Tomorrow'] = data['Close'].shift(-1)
+            data.dropna(inplace=True)
+            X = data[['Open', 'High', 'Low', 'Volume']]
+            y = data['Tomorrow']
+
+            # Splitting the data into training and testing sets
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.transform(X_test)
+
+            # Training the GradientBoostingRegressor model
+            model = GradientBoostingRegressor()
+            model.fit(X_train, y_train)
+
+            # Calculating model accuracy
+            score = model.score(X_test, y_test) * 100
+            scores[ticker] = round(score, 2)
+        except Exception as e:
+            logging.error(f"Error comparing ticker {ticker}: {e}")
+            scores[ticker] = f"Error: {e}"
+
+    # Prepare the message to display the comparison results
+    score_text = "\n".join([f"{k}: {v}%" for k, v in scores.items()])
+
+    # Displaying the results in a message box
+    messagebox.showinfo("Model Accuracy Scores", score_text)
+
+
+# GUI setup
 root = tk.Tk()
 root.title("Tech & Semiconductor Stock Forecast Tool")
 root.geometry("550x500")
@@ -228,6 +296,7 @@ root.geometry("550x500")
 label = tk.Label(root, text="Tech & Semiconductor Stock Forecast Tool", font=("Arial", 14))
 label.pack(pady=10)
 
+# Buttons for the application
 button_excel = tk.Button(root, text="Generate Excel Forecasts", command=generate_excel_with_charts)
 button_excel.pack(pady=5)
 
