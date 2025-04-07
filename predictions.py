@@ -26,20 +26,42 @@ import plotly.express as px
 logging.basicConfig(filename="app.log", level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Sample stock prediction data for Magnificent 7 + Semiconductor stocks
+# Expanded stock prediction data to include industries such as financial institutions, healthcare, airlines, and credit card companies
 data = {
     "Year": [2025, 2026, 2027, 2028, 2029, 2030],
-    "NVIDIA": [0, 60, 120, 180, 240, 300],
-    "Apple": [0, 68, 136, 204, 272, 340],
-    "Microsoft": [0, 132, 264, 396, 528, 660],
-    "Amazon": [0, 64, 128, 192, 256, 320],
-    "Meta": [0, 64, 128, 192, 256, 320],
-    "Alphabet": [0, 58, 116, 174, 232, 290],
-    "Tesla": [0, 80, 160, 240, 320, 400],
-    "AMD": [0, 50, 100, 150, 200, 250],
-    "Intel": [0, 25, 50, 75, 100, 125],
-    "Broadcom": [0, 140, 280, 420, 560, 700],
-    "Qualcomm": [0, 48, 96, 144, 192, 240],
-    "Texas Instruments": [0, 54, 108, 162, 216, 270]
+    "NVIDIA": [0, 150, 300, 450, 600, 750],
+    "Apple": [0, 150, 300, 450, 600, 750],
+    "Microsoft": [0, 150, 300, 450, 600, 750],
+    "Amazon": [0, 150, 300, 450, 600, 750],
+    "Meta": [0, 150, 300, 450, 600, 750],
+    "Alphabet": [0, 150, 300, 450, 600, 750],
+    "Tesla": [0, 150, 300, 450, 600, 750],
+    "AMD": [0, 150, 300, 450, 600, 750],
+    "Intel": [0, 150, 300, 450, 600, 750],
+    "Broadcom": [0, 150, 300, 450, 600, 750],
+    "Qualcomm": [0, 150, 300, 450, 600, 750],
+    "Texas Instruments": [0, 150, 300, 450, 600, 750],
+    # Added new industries and competitors
+    "Bank of America": [0, 150, 300, 450, 600, 750],
+    "JP Morgan": [0, 150, 300, 450, 600, 750],
+    "Morgan Stanley": [0, 150, 300, 450, 600, 750],
+    "Citigroup": [0, 150, 300, 450, 600, 750],
+    "Wells Fargo": [0, 150, 300, 450, 600, 750],
+    "Pfizer": [0, 150, 300, 450, 600, 750],
+    "Moderna": [0, 150, 300, 450, 600, 750],
+    "Johnson & Johnson": [0, 150, 300, 450, 600, 750],
+    "AbbVie": [0, 150, 300, 450, 600, 750],
+    "Merck": [0, 150, 300, 450, 600, 750],
+    "United Airlines": [0, 150, 300, 450, 600, 750],
+    "Delta Airlines": [0, 150, 300, 450, 600, 750],
+    "American Airlines": [0, 150, 300, 450, 600, 750],
+    "Southwest Airlines": [0, 150, 300, 450, 600, 750],
+    "JetBlue": [0, 150, 300, 450, 600, 750],
+    "Mastercard": [0, 150, 300, 450, 600, 750],
+    "Visa": [0, 150, 300, 450, 600, 750],
+    "American Express": [0, 150, 300, 450, 600, 750],
+    "Discover": [0, 150, 300, 450, 600, 750],
+    "Capital One": [0, 150, 300, 450, 600, 750]
 }
 
 df = pd.DataFrame(data)
@@ -152,14 +174,14 @@ def preprocess_data(ticker):
     X_scaled = scaler.fit_transform(X)
     return X_scaled, y
 
-# Optimized function to open market news related to the selected companies
+# Optimized function to open market news related to the selected companies, now includes financial institutions, healthcare companies, airlines, and credit card companies
 def open_news():
     """
     Opens a web browser to display market news for the selected stock tickers.
     Users can enter a list of stock tickers or choose 'ALL' to view news for all the stocks.
     The function now handles multiple ticker news requests efficiently.
     """
-    # Dictionary of URLs for each stock's news
+    # Dictionary of URLs for each stock's news, now includes new industries and companies
     urls = {
         "NVIDIA": "https://www.bloomberg.com/news/features/2025-03-14/can-nvidia-stock-go-higher-jensen-huang-looks-to-extend-ai-boom",
         "Apple": "https://www.cnn.com/business/tech/apple",
@@ -172,7 +194,27 @@ def open_news():
         "Intel": "https://www.marketwatch.com/story/amd-is-struggling-against-nvidia-it-could-soon-face-a-resurgent-intel-as-well-8122991c",
         "Broadcom": "https://www.barrons.com/articles/as-nvidia-and-broadcom-fade-3-chip-stocks-for-ais-next-stage-d7a3163d",
         "Qualcomm": "https://www.marketbeat.com/stocks/NASDAQ/NVDA/competitors-and-alternatives/",
-        "Texas Instruments": "https://www.marketbeat.com/stocks/NASDAQ/NVDA/competitors-and-alternatives/"
+        "Texas Instruments": "https://www.marketbeat.com/stocks/NASDAQ/NVDA/competitors-and-alternatives/",
+        "Bank of America": "https://www.bloomberg.com/quote/BAC:US",
+        "JP Morgan": "https://www.bloomberg.com/quote/JPM:US",
+        "Morgan Stanley": "https://www.bloomberg.com/quote/MS:US",
+        "Citigroup": "https://www.bloomberg.com/quote/C:US",
+        "Wells Fargo": "https://www.bloomberg.com/quote/WFC:US",
+        "Pfizer": "https://www.reuters.com/article/us-pfizer",
+        "Moderna": "https://www.reuters.com/article/us-moderna",
+        "Johnson & Johnson": "https://www.bloomberg.com/quote/JNJ:US",
+        "AbbVie": "https://www.bloomberg.com/quote/ABBV:US",
+        "Merck": "https://www.bloomberg.com/quote/MRK:US",
+        "United Airlines": "https://www.reuters.com/article/us-united-airlines",
+        "Delta Airlines": "https://www.reuters.com/article/us-delta-airlines",
+        "American Airlines": "https://www.reuters.com/article/us-american-airlines",
+        "Southwest Airlines": "https://www.reuters.com/article/us-southwest-airlines",
+        "JetBlue": "https://www.reuters.com/article/us-jetblue",
+        "Mastercard": "https://www.bloomberg.com/quote/MA:US",
+        "Visa": "https://www.bloomberg.com/quote/V:US",
+        "American Express": "https://www.bloomberg.com/quote/AXP:US",
+        "Discover": "https://www.bloomberg.com/quote/DFS:US",
+        "Capital One": "https://www.bloomberg.com/quote/COF:US"
     }
 
     # Prompt the user to enter tickers or use 'ALL' to see news for all stocks
