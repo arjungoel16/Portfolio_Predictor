@@ -27,44 +27,19 @@ logging.basicConfig(filename="app.log", level=logging.DEBUG, format="%(asctime)s
 
 # Sample stock prediction data for Magnificent 7 + Semiconductor stocks
 # Expanded stock prediction data to include industries such as financial institutions, healthcare, airlines, and credit card companies
-data = {
-    "Year": [2025, 2026, 2027, 2028, 2029, 2030],
-    "NVIDIA": [0, 150, 300, 450, 600, 750],
-    "Apple": [0, 150, 300, 450, 600, 750],
-    "Microsoft": [0, 150, 300, 450, 600, 750],
-    "Amazon": [0, 150, 300, 450, 600, 750],
-    "Meta": [0, 150, 300, 450, 600, 750],
-    "Alphabet": [0, 150, 300, 450, 600, 750],
-    "Tesla": [0, 150, 300, 450, 600, 750],
-    "AMD": [0, 150, 300, 450, 600, 750],
-    "Intel": [0, 150, 300, 450, 600, 750],
-    "Broadcom": [0, 150, 300, 450, 600, 750],
-    "Qualcomm": [0, 150, 300, 450, 600, 750],
-    "Texas Instruments": [0, 150, 300, 450, 600, 750],
-    # Added new industries and competitors
-    "Bank of America": [0, 150, 300, 450, 600, 750],
-    "JP Morgan": [0, 150, 300, 450, 600, 750],
-    "Morgan Stanley": [0, 150, 300, 450, 600, 750],
-    "Citigroup": [0, 150, 300, 450, 600, 750],
-    "Wells Fargo": [0, 150, 300, 450, 600, 750],
-    "Pfizer": [0, 150, 300, 450, 600, 750],
-    "Moderna": [0, 150, 300, 450, 600, 750],
-    "Johnson & Johnson": [0, 150, 300, 450, 600, 750],
-    "AbbVie": [0, 150, 300, 450, 600, 750],
-    "Merck": [0, 150, 300, 450, 600, 750],
-    "United Airlines": [0, 150, 300, 450, 600, 750],
-    "Delta Airlines": [0, 150, 300, 450, 600, 750],
-    "American Airlines": [0, 150, 300, 450, 600, 750],
-    "Southwest Airlines": [0, 150, 300, 450, 600, 750],
-    "JetBlue": [0, 150, 300, 450, 600, 750],
-    "Mastercard": [0, 150, 300, 450, 600, 750],
-    "Visa": [0, 150, 300, 450, 600, 750],
-    "American Express": [0, 150, 300, 450, 600, 750],
-    "Discover": [0, 150, 300, 450, 600, 750],
-    "Capital One": [0, 150, 300, 450, 600, 750]
-}
+DATA_FILE = "forecast_data.csv"
 
-df = pd.DataFrame(data)
+# Load or create stock forecast data dynamically
+if os.path.exists(DATA_FILE):
+    df = pd.read_csv(DATA_FILE)
+else:
+    years = [2025, 2026, 2027, 2028, 2029, 2030]
+    default_stocks = ["NVIDIA", "Apple", "Microsoft"]
+    data = {"Year": years}
+    for stock in default_stocks:
+        data[stock] = [0, 150, 300, 450, 600, 750]
+    df = pd.DataFrame(data)
+    df.to_csv(DATA_FILE, index=False)
 
 # Caching mechanism for fetched stock data
 stock_data_cache = {}
@@ -366,5 +341,7 @@ compare_entry.pack()
 
 button_compare = tk.Button(root, text="Compare AI Scores", command=lambda: compare_tickers(compare_entry.get().upper().split(",")))
 button_compare.pack(pady=5)
+button_edit_csv = tk.Button(root, text="Edit Forecast Data", command=lambda: os.system("python edit_forecast_csv.py"))
+button_edit_csv.pack(pady=5)
 
 root.mainloop()
